@@ -48,7 +48,6 @@ coverage.xml
 
 # Environment variables
 .env
-.env.*
 
 # Virtualenv
 venv/
