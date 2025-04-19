@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 .idea/
 *.db
+.env.example
+.env.dev
+.env.production
+milvus/

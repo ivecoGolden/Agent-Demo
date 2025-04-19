@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebSocket Chat Test</title>
+  </head>
+  <body>
+    <h2>WebSocket Chat Test</h2>
+
+    <label>User ID: <input type="text" id="userId" value="test_user" /></label
+    ><br /><br />
+    <label>Text: <input type="text" id="textInput" /></label><br /><br />
+    <label>UUID: <input type="text" id="uuidInput" /></label><br /><br />
+    <label>Image URL: <input type="text" id="imageInput" /></label><br /><br />
+    <button onclick="connectWS()">Connect</button>
+    <button onclick="sendMessage()">Send</button>
+
+    <h3>Response:</h3>
+    <pre id="response"></pre>
+
+    <script>
+      let ws;
+
+      function connectWS() {
+        const userId = document.getElementById("userId").value;
+        ws = new WebSocket(`ws://localhost:7001/ws/${userId}`);
+        ws.onopen = () => {
+          document.getElementById("response").textContent += "Connected.\n";
+        };
+        ws.onmessage = (event) => {
+          document.getElementById("response").textContent += event.data + "\n";
+        };
+        ws.onerror = (err) => {
+          document.getElementById("response").textContent +=
+            "Error: " + err + "\n";
+        };
+        ws.onclose = () => {
+          document.getElementById("response").textContent += "Disconnected.\n";
+        };
+      }
+
+      function sendMessage() {
+        const text = document.getElementById("textInput").value;
+        const image = document.getElementById("imageInput").value;
+        const uuid = document.getElementById("uuidInput").value;
+        const payload = {
+          uuid: uuid,
+          text: text,
+          image: image,
+          video: "", // 目前未处理视频
+        };
+        ws.send(JSON.stringify(payload));
+      }
+    </script>
+  </body>
+</html>

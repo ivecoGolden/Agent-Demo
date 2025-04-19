@@ -8,6 +8,7 @@ load_dotenv()
 
 from app.core.database import Base
 from app.models.user import User
+from app.models.chat_record import ChatRecord
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool

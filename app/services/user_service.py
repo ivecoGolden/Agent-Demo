@@ -6,6 +6,7 @@ from app.utils.security import verify_password
 from app.utils.jwt import create_access_token
 from app.schemas.user import UserLoginRequest
 from fastapi import HTTPException
+import uuid
 
 
 def register_user(db: Session, user_data: UserRegisterRequest) -> User:
@@ -35,6 +36,7 @@ def register_user(db: Session, user_data: UserRegisterRequest) -> User:
     user = User(
         username=user_data.username,
         email=user_data.email,
+        userid=str(uuid.uuid4()),  # 添加用户唯一标识
         hashed_password=hash_password(user_data.password),  # 使用bcrypt加密密码
     )
     db.add(user)  # 将用户对象添加到当前数据库会话
@@ -101,3 +103,16 @@ def get_users(db: Session, skip: int = 0, limit: int = 10):
         "total": total,
         "users": [UserResponse.model_validate(u) for u in users],  # 序列化用户数据
     }
+
+
+def get_user_by_uuid(db: Session, user_uuid: str) -> User | None:
+    """根据UUID获取用户对象
+
+    Args:
+        db (Session): 数据库会话
+        user_uuid (str): 用户唯一标识（UUID）
+
+    Returns:
+        User | None: 查询到的用户对象，如果不存在则返回None
+    """
+    return db.query(User).filter(User.userid == user_uuid).first()

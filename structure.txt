@@ -1,0 +1,86 @@
+.
+├── Dockerfile
+├── README.md
+├── alembic
+│   ├── README
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions
+│       ├── 11344d5f90ba_add_is_active_and_role.py
+│       ├── 2f8f00544ae8_add_chatrecord_table_and_userid_field.py
+│       └── a0d2c58c292d_create_users_table.py
+├── alembic.ini
+├── app
+│   ├── __init__.py
+│   ├── agents
+│   │   ├── __init__.py
+│   │   └── text_agent.py
+│   ├── core
+│   │   ├── config.py
+│   │   ├── connection_manager.py
+│   │   ├── database.py
+│   │   ├── deps.py
+│   │   ├── logger.py
+│   │   └── startup.py
+│   ├── llm
+│   │   ├── LLMModelConfig.py
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── openai_client.py
+│   │   └── schemas.py
+│   ├── main.py
+│   ├── models
+│   │   ├── chat_record.py
+│   │   ├── user.py
+│   │   └── ws_message.py
+│   ├── prompt
+│   │   └── systemPrompt.py
+│   ├── rag
+│   │   ├── __init__.py
+│   │   ├── embedder.py
+│   │   ├── indexer.py
+│   │   ├── milvus_handler.py
+│   │   ├── retriever.py
+│   │   ├── schemas.py
+│   │   └── users
+│   ├── routers
+│   │   ├── agent_test.py
+│   │   ├── chat.py
+│   │   ├── rag_test.py
+│   │   └── user.py
+│   ├── schemas
+│   │   └── user.py
+│   ├── services
+│   │   ├── chat_record_service.py
+│   │   ├── rag_service.py
+│   │   └── user_service.py
+│   ├── utils
+│   │   ├── jwt.py
+│   │   ├── response.py
+│   │   └── security.py
+│   └── web
+│       ├── websocket.html
+│       └── ws-auth-test.html
+├── docker-compose-first.yml
+├── docker-compose.yml
+├── docs
+│   └── product.md
+├── milvus
+│   ├── docker-compose.yml
+│   └── volumes
+│       ├── etcd
+│       │   └── member
+│       ├── milvus
+│       │   ├── data
+│       │   ├── rdb_data
+│       │   └── rdb_data_meta_kv
+│       └── minio
+│           └── a-bucket
+├── requirements.txt
+├── structure.txt
+├── tests
+│   ├── test_openai_client.py
+│   └── test_user_flow.py
+└── wait-for-it.sh
+
+28 directories, 56 files

@@ -14,4 +14,4 @@ COPY . .
 RUN chmod +x wait-for-it.sh
 
 # 启动应用
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:7000"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:7001"]

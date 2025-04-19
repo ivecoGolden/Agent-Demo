@@ -48,6 +48,8 @@ coverage.xml
 
 # Environment variables
 .env
+.env.dev
+.env.production
 
 # Virtualenv
 venv/
@@ -83,3 +85,4 @@ dmypy.json
 
 # Ignore local settings
 settings_local.py
+/milvus/

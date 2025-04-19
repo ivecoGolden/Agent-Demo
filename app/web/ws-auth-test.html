@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebSocket Auth 测试</title>
+  </head>
+  <body>
+    <h2>WebSocket Auth 聊天测试</h2>
+
+    <label>用户 ID: <input type="text" id="userId" value="123" /></label><br />
+    <label>Token: <input type="text" id="token" style="width: 400px" /></label
+    ><br />
+    <label>UUID: <input type="text" id="uuid" value="uuid-001" /></label><br />
+    <label>文字内容: <input type="text" id="text" value="你好" /></label><br />
+    <label>图片地址（可空）: <input type="text" id="image" /></label><br />
+    <button onclick="connect()">连接</button>
+    <button onclick="sendMessage()">发送消息</button>
+
+    <pre
+      id="log"
+      style="
+        background: #eee;
+        padding: 1em;
+        max-height: 300px;
+        overflow-y: scroll;
+      "
+    ></pre>
+
+    <script>
+      let socket;
+
+      function log(message) {
+        const logEl = document.getElementById("log");
+        logEl.textContent += message + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function connect() {
+        const userId = document.getElementById("userId").value;
+        const token = document.getElementById("token").value;
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+
+        const wsUrl = `ws://localhost:7001/ws-auth/${userId}?token=${token}`;
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => log("✅ 已连接");
+        socket.onmessage = (event) => log("📨 收到消息: " + event.data);
+        socket.onclose = () => log("❌ 连接关闭");
+        socket.onerror = (error) => log("⚠️ 错误: " + error);
+      }
+
+      function sendMessage() {
+        const uuid = document.getElementById("uuid").value;
+        const text = document.getElementById("text").value;
+        const image = document.getElementById("image").value;
+
+        const message = {
+          uuid: uuid,
+          text: text,
+          image: image,
+          video: "", // 留空
+        };
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify(message));
+          log("📤 发送消息: " + JSON.stringify(message));
+        } else {
+          log("❗ WebSocket 未连接");
+        }
+      }
+    </script>
+  </body>
+</html>

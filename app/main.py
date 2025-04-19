@@ -4,10 +4,43 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.utils.response import error
-from app.routers import user
+from app.routers import chat, user
 from app.core.logger import logger
 
+# from app.core.startup import initialize_product_docs
+from app.core.config import settings
+from fastapi.responses import HTMLResponse
+
+# from contextlib import asynccontextmanager
+from app.routers import rag_test
+from app.routers import agent_test
+
 logger.info("🚀 应用启动成功")
+
+
+# @asynccontextmanager  # 异步上下文管理器装饰器
+# async def lifespan(app: FastAPI):
+#     """应用生命周期管理器
+
+#     参数:
+#         app: FastAPI 实例
+
+#     说明:
+#         - 启动时按配置决定是否自动向量化产品文档
+#         - yield 前执行启动逻辑，yield 后可扩展关闭逻辑
+#     """
+#     if settings.AUTO_INITIALIZE_DOCS is True:  # 检查是否启用自动初始化配置
+#         print(
+#             "AUTO_INITIALIZE_DOCS =",
+#             settings.AUTO_INITIALIZE_DOCS,
+#             type(settings.AUTO_INITIALIZE_DOCS),
+#         )
+#         logger.info("📦 自动向量化产品说明文档启动中...")
+#         await initialize_product_docs()  # 异步初始化产品文档
+#     else:
+#         logger.info("🚫 已关闭启动时向量化产品说明文档")
+#     yield  # 分隔启动和关闭逻辑
+
 
 app = FastAPI()
 
@@ -79,6 +112,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(user.router)
+app.include_router(chat.router)
+app.include_router(rag_test.router, prefix="/test")
+app.include_router(agent_test.router)
 
 
 @app.get("/")
@@ -94,3 +130,13 @@ def health_check():
         - 简单响应减少带宽消耗
     """
     return {"status": "ok"}  # 返回标准健康状态响应
+
+
+@app.get("/ws-docs", response_class=HTMLResponse)
+async def websocket_docs():
+    return """
+    <h2>WebSocket 接口说明</h2>
+    <p>连接地址: <code>ws://yourdomain.com/ws/chat</code></p>
+    <p>发送格式: JSON，例如 <code>{"username": "张三", "message": "你好"}</code></p>
+    <p>响应格式: JSON，例如 <code>{"from": "系统", "message": "欢迎你"}</code></p>
+    """

@@ -1,0 +1,33 @@
+services:
+  db:
+    image: crpi-qf67s2qzcbuiic6v.cn-hangzhou.personal.cr.aliyuncs.com/moguangkeji/postgre:17 # 使用 PostgreSQL 17 的官方镜像
+    # image: postgres:17
+    restart: always # 容器异常退出时自动重启
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env # 加载环境变量文件
+    ports:
+      - "5432:5432" # 映射本地的 5432 端口到容器的 5432 端口
+    volumes:
+      - pgdata:/var/lib/postgresql/data # 持久化数据库数据到名为 pgdata 的卷
+
+  web:
+    image: crpi-qf67s2qzcbuiic6v.cn-hangzhou.personal.cr.aliyuncs.com/moguangkeji/mg_test:v0.0.2 # 构建完成后的镜像标签
+    # image: mg_test:v0.0.2
+    build: . # 使用当前目录的 Dockerfile 构建镜像
+    ports:
+      - "7001:7001" # 映射本地的 7000 端口到容器的 7000 端口
+    env_file:
+      - .env # 加载环境变量文件
+    depends_on:
+      - db # 在启动当前服务前，确保 db 服务已启动
+    command: >
+      sh -c "./wait-for-it.sh db:5432 --  # 等待数据库端口可用
+            alembic upgrade head &&  # 执行数据库迁移脚本
+            gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:7001"  # 启动 FastAPI 应用
+
+volumes:
+  pgdata: # 自定义卷名称，用于持久化数据库
