@@ -57,11 +57,11 @@ class NormalAgent:
 
     async def _handle_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> str:
         results = []
-        for tool_call in tool_calls:
-            tool_name = tool_call["name"]
-            tool_args = tool_call["arguments"]
-            if tool_name in self.tool_map:
-                result = await self.tool_map[tool_name](tool_args)
+        for call in tool_calls:
+            name = call.get("name")
+            args = call.get("arguments", {})
+            if name in self.tool_map:
+                result = await self.tool_map[name](args)
                 results.append(result)
         return "\n".join(results)
 
@@ -72,14 +72,14 @@ class NormalAgent:
         parsed_memories = await memory_service.search_user_memory_parsed(
             user_id=user_uuid, query=query
         )
-        user_memery = "\n".join(
+        memory_text = "\n".join(
             f"【{m['category']}】{m['content']}" for m in parsed_memories
         )
         stream = self.client.stream_chat_with_tools(
             system=build_prompt(
                 SystemPrompt.BASE_CALL,
                 assistant_name="MGAgent",
-                user_memory=user_memery,
+                user_memory=memory_text,
             ),
             history=history,
             prompt=user_prompt,
@@ -104,7 +104,7 @@ class NormalAgent:
                     build_prompt(
                         SystemPrompt.TOOL_UESD_CALL,
                         tool_result=tool_result_text,
-                        user_memory=user_memery,
+                        user_memory=memory_text,
                     ),
                     user_prompt,
                     history,

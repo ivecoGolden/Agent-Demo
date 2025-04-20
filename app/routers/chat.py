@@ -32,13 +32,11 @@ memory_extractor = get_memory_extractor()
 async def websocket_endpoint(
     websocket: WebSocket, user_uuid: str, db: Session = Depends(get_db)
 ):
-    user = get_user_by_uuid(db=db, user_uuid=user_uuid)
-    user_id = user.id
     await manager.connect(user_uuid, websocket)
     try:
         while True:
             data_raw = await websocket.receive_text()
-            history = get_recent_chat_history(user_id=user_id, db=db)
+            history = get_recent_chat_history(user_id=user_uuid, db=db)
             try:
                 payload = json.loads(data_raw)
                 uuid = payload.get("uuid", "")
@@ -53,7 +51,7 @@ async def websocket_endpoint(
                 return
 
             logger.info(
-                f"Received from {user_id}: uuid={uuid}, text={text}, image={image}, video={video}"
+                f"Received from {uuid}: text={text}, image={image}, video={video}"
             )
 
             client = get_llm_vl_client() if image else get_llm_text_client()
@@ -76,7 +74,7 @@ async def websocket_endpoint(
             response_start_time = datetime.now(timezone.utc)
             await save_chat_record(
                 db=db,
-                user_id=int(user_id),
+                user_id=user_uuid,
                 uuid=uuid,
                 role="user",
                 model=None,
@@ -126,7 +124,7 @@ async def websocket_endpoint(
             response_end_time = datetime.now(timezone.utc)
             await save_chat_record(
                 db=db,
-                user_id=int(user_id),
+                user_id=user_uuid,
                 uuid=uuid,
                 role="assistant",
                 model=chunk.model,
@@ -141,7 +139,7 @@ async def websocket_endpoint(
                     user_id=user_uuid, message=text, reply=history[-3]["content"]
                 )
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
+        manager.disconnect(user_uuid)
     except Exception as e:
         import traceback
 
@@ -150,19 +148,13 @@ async def websocket_endpoint(
             uuid=uuid, content="服务异常，请稍后再试。", status="error"
         )
         await websocket.send_text(message.model_dump_json())
-        manager.disconnect(user_id)
+        manager.disconnect(user_uuid)
 
 
-@router.websocket("/ws-auth/{user_id}")
+@router.websocket("/ws-auth/{user_uuid}")
 async def websocket_endpoint_auth(
-    websocket: WebSocket, user_id: str, db: Session = Depends(get_db)
+    websocket: WebSocket, user_uuid: str, db: Session = Depends(get_db)
 ):
-    """带认证的WebSocket聊天端点
-    Args:
-        websocket: WebSocket连接对象
-        user_id: 用户ID路径参数
-        db: 数据库会话依赖注入
-    """
     try:
         # 从查询参数获取token
         token = websocket.query_params.get("token")
@@ -180,19 +172,19 @@ async def websocket_endpoint_auth(
             db=db,
         )
         # 验证用户ID是否匹配
-        if current_user.id != int(user_id):
+        if current_user.userid != user_uuid:
             await websocket.close(code=1008)
             return
 
         # 连接管理
-        await manager.connect(user_id, websocket)
+        await manager.connect(user_uuid, websocket)
 
         # 主消息循环
         while True:
             # 接收原始消息数据
             data_raw = await websocket.receive_text()
             # 获取最近聊天历史
-            history = get_recent_chat_history(user_id=int(user_id), db=db)
+            history = get_recent_chat_history(user_id=user_uuid, db=db)
 
             try:
                 # 解析JSON消息
@@ -211,7 +203,7 @@ async def websocket_endpoint_auth(
 
             # 记录接收日志
             logger.info(
-                f"Received from {user_id}: uuid={uuid}, text={text}, image={image}, video={video}"
+                f"Received from {uuid}: text={text}, image={image}, video={video}"
             )
 
             # 根据是否有图片选择不同的客户端(VL支持多模态)
@@ -241,7 +233,7 @@ async def websocket_endpoint_auth(
             response_start_time = datetime.now(timezone.utc)
             await save_chat_record(
                 db=db,
-                user_id=int(user_id),
+                user_id=user_uuid,
                 uuid=uuid,
                 role="user",
                 model=None,
@@ -282,7 +274,7 @@ async def websocket_endpoint_auth(
             response_end_time = datetime.now(timezone.utc)
             await save_chat_record(
                 db=db,
-                user_id=int(user_id),
+                user_id=user_uuid,
                 uuid=uuid,
                 role="assistant",
                 model=chunk.model,
@@ -295,7 +287,7 @@ async def websocket_endpoint_auth(
 
     except WebSocketDisconnect:
         # WebSocket断开连接处理
-        manager.disconnect(user_id)
+        manager.disconnect(user_uuid)
     except Exception as e:
         # 其他异常处理
         import traceback
@@ -305,4 +297,4 @@ async def websocket_endpoint_auth(
             uuid=uuid, content="服务异常，请稍后再试。", status="error"
         )
         await websocket.send_text(message.model_dump_json())
-        manager.disconnect(user_id)
+        manager.disconnect(user_uuid)

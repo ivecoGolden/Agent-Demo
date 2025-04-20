@@ -13,7 +13,7 @@ from openai.types.chat import (
 
 async def save_chat_record(
     db: Session,  # SQLAlchemy数据库会话
-    user_id: int,  # 用户ID
+    user_id: str,  # 用户ID
     uuid: str,  # 消息唯一标识符
     role: str,  # 消息角色(user/assistant)
     model: Optional[str],  # 使用的AI模型名称(可为空)
@@ -61,7 +61,7 @@ async def save_chat_record(
     return record  # 返回保存后的记录
 
 
-def get_recent_chat_history(user_id: int, db: Session, limit: int = 7):
+def get_recent_chat_history(user_id: str, db: Session, limit: int = 7):
     """获取用户最近的聊天历史记录
 
     Args:

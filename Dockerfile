@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 添加执行权限给 wait-for-it.sh
-RUN chmod +x wait-for-it.sh
+# RUN chmod +x wait-for-it.sh
 
 # 启动应用
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:7001"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:80"]

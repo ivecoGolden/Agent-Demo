@@ -25,6 +25,7 @@ email_validator==2.2.0
 fastapi==0.115.12
 frozenlist==1.5.0
 greenlet==3.1.1
+grpcio==1.67.1
 gunicorn==23.0.0
 h11==0.14.0
 httpcore==1.0.7
@@ -52,6 +53,7 @@ MarkupSafe==3.0.2
 marshmallow==3.26.1
 mcp==1.6.0
 mdurl==0.1.2
+milvus-lite==2.4.12
 monotonic==1.6
 multidict==6.4.3
 mypy-extensions==1.0.0
@@ -60,11 +62,13 @@ ollama==0.4.7
 openai==1.70.0
 orjson==3.10.16
 packaging==24.2
+pandas==2.2.3
 passlib==1.7.4
 playwright==1.51.0
 pluggy==1.5.0
 posthog==3.24.1
 propcache==0.3.1
+protobuf==6.30.2
 psycopg2-binary==2.9.10
 pyasn1==0.4.8
 pycparser==2.22
@@ -74,12 +78,14 @@ pydantic_core==2.33.1
 pyee==12.1.1
 Pygments==2.19.1
 PyJWT==2.10.1
+pymilvus==2.5.6
 pytest==8.3.5
 pytest-asyncio==0.26.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-jose==3.4.0
 python-multipart==0.0.20
+pytz==2025.2
 PyYAML==6.0.2
 regex==2024.11.6
 requests==2.32.3
@@ -102,6 +108,8 @@ typer==0.15.2
 typing-inspect==0.9.0
 typing-inspection==0.4.0
 typing_extensions==4.13.0
+tzdata==2025.2
+ujson==5.10.0
 urllib3==2.4.0
 uvicorn==0.34.0
 uvloop==0.21.0

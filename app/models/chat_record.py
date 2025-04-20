@@ -9,7 +9,10 @@ class ChatRecord(Base):
     id = Column(Integer, primary_key=True, index=True, comment="主键 ID")
 
     user_id = Column(
-        Integer, ForeignKey("users.id"), index=True, comment="关联的用户 ID"
+        String(64),
+        ForeignKey("users.userid"),
+        index=True,
+        comment="关联的用户唯一标识（UUID）",
     )
 
     uuid = Column(

@@ -19,10 +19,11 @@ class MilvusMemoryHandler:
     def _create_or_load_collection(self):
         if utility.has_collection(self.collection_name):
             self.collection = Collection(self.collection_name)
-            if utility.load_state(self.collection_name) != "Loaded":
-                self.collection.load()
-            return
+            self._load_collection_if_needed()
+        else:
+            self._create_collection()
 
+    def _create_collection(self):
         fields = [
             FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
             FieldSchema(
@@ -49,6 +50,10 @@ class MilvusMemoryHandler:
         )
         self.collection.load()
 
+    def _load_collection_if_needed(self):
+        if utility.load_state(self.collection_name) != "Loaded":
+            self.collection.load()
+
     def insert_memory_bulk(
         self,
         user_id: str,
@@ -56,10 +61,11 @@ class MilvusMemoryHandler:
         contents: List[str],
         categories: List[str],
         source: str = "chat",
-    ):
-        timestamps = [int(time.time())] * len(embeddings)
-        user_ids = [user_id] * len(embeddings)
-        sources = [source] * len(embeddings)
+    ) -> None:
+        count = len(embeddings)
+        timestamps = [int(time.time())] * count
+        user_ids = [user_id] * count
+        sources = [source] * count
 
         data = [
             user_ids,
