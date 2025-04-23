@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     AUTO_INITIALIZE_DOCS: bool = False
 
+    @property
+    def MILVUS_HOST(self) -> str:
+        return "localhost" if self.ENV == "dev" else "milvus-standalone"
+
     class Config:
         env_file = ".env"
 

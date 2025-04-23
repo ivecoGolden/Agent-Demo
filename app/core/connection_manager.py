@@ -8,7 +8,7 @@ class ConnectionManager:
         self.active_connections: Dict[str, WebSocket] = {}
 
     async def connect(self, user_id: str, websocket: WebSocket):
-        await websocket.accept()
+        # await websocket.accept()
         self.active_connections[user_id] = websocket
         logger.info(f"User {user_id} connected. Active: {len(self.active_connections)}")
 

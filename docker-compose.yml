@@ -1,19 +1,16 @@
 services:
   mg_agent:
-    image: crpi-qf67s2qzcbuiic6v.cn-hangzhou.personal.cr.aliyuncs.com/moguangkeji/mg_agent:v0.0.1
+    image: crpi-qf67s2qzcbuiic6v.cn-hangzhou.personal.cr.aliyuncs.com/moguangkeji/mg_agent:v0.0.5
     container_name: mg-main
     ports:
-      - "80:80"
+      - "1234:80"
     env_file:
       - .env
     networks:
       - backend
     restart: unless-stopped
-    depends_on:
-      - db
     command: >
       sh -c "
-        ./wait-for-it.sh db:5432 -- &&
         alembic upgrade head &&
         gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:80
       "

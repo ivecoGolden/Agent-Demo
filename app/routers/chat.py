@@ -20,6 +20,22 @@ from app.services.chat_record_service import get_recent_chat_history
 from app.llm.openai_client import get_llm_text_client, get_llm_vl_client
 from app.memory.memory_extractor import get_memory_extractor
 from app.services.user_service import get_user_by_uuid
+from fastapi import WebSocketException, status
+
+
+async def get_user_from_websocket(websocket: WebSocket, db: Session = Depends(get_db)):
+    token = websocket.headers.get("Authorization")
+    if token and token.startswith("Bearer "):
+        token = token[7:]
+    else:
+        token = websocket.query_params.get("token")
+
+    if not token:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    return get_current_user(credentials=credentials, db=db)
+
 
 router = APIRouter()
 
@@ -28,119 +44,13 @@ agent = NormalAgent()
 memory_extractor = get_memory_extractor()
 
 
-@router.websocket("/ws/{user_uuid}")
-async def websocket_endpoint(
-    websocket: WebSocket, user_uuid: str, db: Session = Depends(get_db)
+@router.websocket("/ws-auth")
+async def websocket_endpoint_auth(
+    websocket: WebSocket,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_user_from_websocket),
 ):
-    await manager.connect(user_uuid, websocket)
-    try:
-        while True:
-            data_raw = await websocket.receive_text()
-            history = get_recent_chat_history(user_id=user_uuid, db=db)
-            try:
-                payload = json.loads(data_raw)
-                uuid = payload.get("uuid", "")
-                text = payload.get("text", "")
-                image = payload.get("image", [])
-                video = payload.get("video", "")
-            except json.JSONDecodeError:
-                message = StreamMessage(
-                    uuid=uuid, content="服务异常，请稍后再试。", status="error"
-                )
-                await websocket.send_text(message.model_dump_json())
-                return
-
-            logger.info(
-                f"Received from {uuid}: text={text}, image={image}, video={video}"
-            )
-
-            client = get_llm_vl_client() if image else get_llm_text_client()
-            content = (
-                [ChatCompletionContentPartTextParam(type="text", text=text)]
-                + [
-                    ChatCompletionContentPartImageParam(
-                        type="image_url", image_url={"url": url, "detail": "auto"}
-                    )
-                    for url in image
-                ]
-                if image
-                else [ChatCompletionContentPartTextParam(type="text", text=text)]
-            )
-            user_msg = ChatCompletionUserMessageParam(role="user", content=content)
-            system = ChatCompletionSystemMessageParam(
-                role="system", content="You are a helpful assistant."
-            )
-
-            response_start_time = datetime.now(timezone.utc)
-            await save_chat_record(
-                db=db,
-                user_id=user_uuid,
-                uuid=uuid,
-                role="user",
-                model=None,
-                text=text,
-                image=image,
-                video=video,
-                response_start_time=response_start_time,
-                response_end_time=None,
-            )
-
-            first_chunk = True
-            response_start_time = datetime.now(timezone.utc)
-            full_response = ""
-            if image:
-                async for chunk in client.stream_chat(system, user_msg, history):
-                    delta = chunk.choices[0].delta
-                    finish_reason = chunk.choices[0].finish_reason
-                    content_piece = delta.content or ""
-                    full_response += content_piece
-                    message = StreamMessage(
-                        uuid=uuid,
-                        content=content_piece,
-                        status="streaming" if finish_reason is None else "done",
-                    )
-                    if first_chunk:
-                        message = StreamMessage(uuid=uuid, content="", status="start")
-                        await websocket.send_text(message.model_dump_json())
-                        first_chunk = False
-                    await websocket.send_text(message.model_dump_json())
-            else:
-                async for chunk in agent.run(text, user_uuid, []):
-                    delta = chunk.choices[0].delta
-                    finish_reason = chunk.choices[0].finish_reason
-                    content_piece = delta.content or ""
-                    full_response += content_piece
-                    message = StreamMessage(
-                        uuid=uuid,
-                        content=content_piece,
-                        status="streaming" if finish_reason is None else "done",
-                    )
-                    if first_chunk:
-                        message = StreamMessage(uuid=uuid, content="", status="start")
-                        await websocket.send_text(message.model_dump_json())
-                        first_chunk = False
-                    await websocket.send_text(message.model_dump_json())
-
-            response_end_time = datetime.now(timezone.utc)
-            await save_chat_record(
-                db=db,
-                user_id=user_uuid,
-                uuid=uuid,
-                role="assistant",
-                model=chunk.model,
-                text=full_response,
-                image=image,
-                video=video,
-                response_start_time=response_start_time,
-                response_end_time=response_end_time,
-            )
-            if history and len(history) >= 3:
-                await memory_extractor.extract_memory_points(
-                    user_id=user_uuid, message=text, reply=history[-3]["content"]
-                )
-    except WebSocketDisconnect:
-        manager.disconnect(user_uuid)
-    except Exception as e:
+    async def handle_exception(e: Exception, uuid: str = ""):
         import traceback
 
         logger.error(f"Unexpected error: {e}\n{traceback.format_exc()}")
@@ -150,43 +60,20 @@ async def websocket_endpoint(
         await websocket.send_text(message.model_dump_json())
         manager.disconnect(user_uuid)
 
-
-@router.websocket("/ws-auth/{user_uuid}")
-async def websocket_endpoint_auth(
-    websocket: WebSocket, user_uuid: str, db: Session = Depends(get_db)
-):
     try:
-        # 从查询参数获取token
-        token = websocket.query_params.get("token")
-        if not token:
-            await websocket.close(code=1008)  # 无token则关闭连接(1008表示策略违规)
-            return
-
-        # 验证token并获取当前用户
-        scheme = "Bearer"
-        credentials = token
-        current_user = get_current_user(
-            credentials=HTTPAuthorizationCredentials(
-                scheme=scheme, credentials=credentials
-            ),
-            db=db,
-        )
-        # 验证用户ID是否匹配
-        if current_user.userid != user_uuid:
-            await websocket.close(code=1008)
-            return
+        user_uuid = current_user.userid
 
         # 连接管理
         await manager.connect(user_uuid, websocket)
 
         # 主消息循环
         while True:
-            # 接收原始消息数据
-            data_raw = await websocket.receive_text()
-            # 获取最近聊天历史
-            history = get_recent_chat_history(user_id=user_uuid, db=db)
-
             try:
+                # 接收原始消息数据
+                data_raw = await websocket.receive_text()
+                # 获取最近聊天历史
+                history = get_recent_chat_history(user_id=user_uuid, db=db)
+
                 # 解析JSON消息
                 payload = json.loads(data_raw)
                 uuid = payload.get("uuid", "")  # 消息唯一ID
@@ -194,12 +81,8 @@ async def websocket_endpoint_auth(
                 image = payload.get("image", [])  # 图片URL列表
                 video = payload.get("video", "")  # 视频URL
             except json.JSONDecodeError:
-                # JSON解析错误处理
-                message = StreamMessage(
-                    uuid=uuid, content="服务异常，请稍后再试。", status="error"
-                )
-                await websocket.send_text(message.model_dump_json())
-                return
+                await handle_exception(Exception("JSON解析失败"), uuid)
+                continue
 
             # 记录接收日志
             logger.info(
@@ -248,28 +131,42 @@ async def websocket_endpoint_auth(
             first_chunk = True
             response_start_time = datetime.now(timezone.utc)
             full_response = ""
+            if image:
+                # 流式获取AI响应
+                async for chunk in client.stream_chat(system, user_msg, history):
+                    delta = chunk.choices[0].delta
+                    finish_reason = chunk.choices[0].finish_reason
+                    content_piece = delta.content or ""
+                    full_response += content_piece
 
-            # 流式获取AI响应
-            async for chunk in client.stream_chat(system, user_msg, history):
-                delta = chunk.choices[0].delta
-                finish_reason = chunk.choices[0].finish_reason
-                content_piece = delta.content or ""
-                full_response += content_piece
-
-                # 构建流式消息
-                message = StreamMessage(
-                    uuid=uuid,
-                    content=content_piece,
-                    status="streaming" if finish_reason is None else "done",
-                )
-                # 发送开始标记(仅第一次)
-                if first_chunk:
-                    message = StreamMessage(uuid=uuid, content="", status="start")
+                    # 构建流式消息
+                    message = StreamMessage(
+                        uuid=uuid,
+                        content=content_piece,
+                        status="streaming" if finish_reason is None else "done",
+                    )
+                    # 发送开始标记(仅第一次)
+                    if first_chunk:
+                        start_msg = StreamMessage(uuid=uuid, content="", status="start")
+                        await websocket.send_text(start_msg.model_dump_json())
+                        first_chunk = False
                     await websocket.send_text(message.model_dump_json())
-                    first_chunk = False
-                # 发送内容片段
-                await websocket.send_text(message.model_dump_json())
-
+            else:
+                async for chunk in agent.run(text, user_uuid, []):
+                    delta = chunk.choices[0].delta
+                    finish_reason = chunk.choices[0].finish_reason
+                    content_piece = delta.content or ""
+                    full_response += content_piece
+                    message = StreamMessage(
+                        uuid=uuid,
+                        content=content_piece,
+                        status="streaming" if finish_reason is None else "done",
+                    )
+                    if first_chunk:
+                        start_msg = StreamMessage(uuid=uuid, content="", status="start")
+                        await websocket.send_text(start_msg.model_dump_json())
+                        first_chunk = False
+                    await websocket.send_text(message.model_dump_json())
             # 保存AI响应记录
             response_end_time = datetime.now(timezone.utc)
             await save_chat_record(
@@ -284,12 +181,45 @@ async def websocket_endpoint_auth(
                 response_start_time=response_start_time,
                 response_end_time=response_end_time,
             )
-
+            if history and len(history) >= 3:
+                await memory_extractor.extract_memory_points(
+                    user_id=user_uuid, message=text, reply=history[-3]["content"]
+                )
     except WebSocketDisconnect:
-        # WebSocket断开连接处理
         manager.disconnect(user_uuid)
     except Exception as e:
-        # 其他异常处理
+        await handle_exception(e)
+
+
+@router.websocket("/ws-auth-late")
+async def websocket_endpoint_auth_late(
+    websocket: WebSocket, db: Session = Depends(get_db)
+):
+    await websocket.accept()
+
+    try:
+        auth_data = await websocket.receive_text()
+        payload = json.loads(auth_data)
+        token = payload.get("token")
+        if not token:
+            raise ValueError("缺少 token")
+
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        user = get_current_user(credentials=credentials, db=db)
+        user_uuid = user.userid
+
+    except WebSocketDisconnect:
+        logger.warning("❌ 客户端在身份验证前断开连接")
+        return
+    except Exception as e:
+        logger.error(f"WebSocket Auth Failed: {e}")
+        try:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        except RuntimeError as re:
+            logger.warning(f"连接可能已关闭，忽略 websocket.close 错误: {re}")
+        return
+
+    async def handle_exception(e: Exception, uuid: str = ""):
         import traceback
 
         logger.error(f"Unexpected error: {e}\n{traceback.format_exc()}")
@@ -298,3 +228,116 @@ async def websocket_endpoint_auth(
         )
         await websocket.send_text(message.model_dump_json())
         manager.disconnect(user_uuid)
+
+    try:
+        await manager.connect(user_uuid, websocket)
+
+        while True:
+            try:
+                data_raw = await websocket.receive_text()
+                history = get_recent_chat_history(user_id=user_uuid, db=db)
+
+                payload = json.loads(data_raw)
+                uuid = payload.get("uuid", "")
+                text = payload.get("text", "")
+                image = payload.get("image", [])
+                video = payload.get("video", "")
+            except json.JSONDecodeError:
+                await handle_exception(Exception("JSON解析失败"), uuid)
+                continue
+
+            logger.info(
+                f"Received from {uuid}: text={text}, image={image}, video={video}"
+            )
+
+            client = get_llm_vl_client() if image else get_llm_text_client()
+
+            content = (
+                [ChatCompletionContentPartTextParam(type="text", text=text)]
+                + [
+                    ChatCompletionContentPartImageParam(
+                        type="image_url", image_url={"url": url, "detail": "auto"}
+                    )
+                    for url in image
+                ]
+                if image
+                else [ChatCompletionContentPartTextParam(type="text", text=text)]
+            )
+
+            system = ChatCompletionSystemMessageParam(
+                role="system", content="You are a helpful assistant."
+            )
+            user_msg = ChatCompletionUserMessageParam(role="user", content=content)
+
+            response_start_time = datetime.now(timezone.utc)
+            await save_chat_record(
+                db=db,
+                user_id=user_uuid,
+                uuid=uuid,
+                role="user",
+                model=None,
+                text=text,
+                image=image,
+                video=video,
+                response_start_time=response_start_time,
+                response_end_time=None,
+            )
+
+            first_chunk = True
+            response_start_time = datetime.now(timezone.utc)
+            full_response = ""
+            if image:
+                async for chunk in client.stream_chat(system, user_msg, history):
+                    delta = chunk.choices[0].delta
+                    finish_reason = chunk.choices[0].finish_reason
+                    content_piece = delta.content or ""
+                    full_response += content_piece
+
+                    message = StreamMessage(
+                        uuid=uuid,
+                        content=content_piece,
+                        status="streaming" if finish_reason is None else "done",
+                    )
+                    if first_chunk:
+                        start_msg = StreamMessage(uuid=uuid, content="", status="start")
+                        await websocket.send_text(start_msg.model_dump_json())
+                        first_chunk = False
+                    await websocket.send_text(message.model_dump_json())
+            else:
+                async for chunk in agent.run(text, user_uuid, []):
+                    delta = chunk.choices[0].delta
+                    finish_reason = chunk.choices[0].finish_reason
+                    content_piece = delta.content or ""
+                    full_response += content_piece
+                    message = StreamMessage(
+                        uuid=uuid,
+                        content=content_piece,
+                        status="streaming" if finish_reason is None else "done",
+                    )
+                    if first_chunk:
+                        start_msg = StreamMessage(uuid=uuid, content="", status="start")
+                        await websocket.send_text(start_msg.model_dump_json())
+                        first_chunk = False
+                    await websocket.send_text(message.model_dump_json())
+
+            response_end_time = datetime.now(timezone.utc)
+            await save_chat_record(
+                db=db,
+                user_id=user_uuid,
+                uuid=uuid,
+                role="assistant",
+                model=chunk.model,
+                text=full_response,
+                image=image,
+                video=video,
+                response_start_time=response_start_time,
+                response_end_time=response_end_time,
+            )
+            if history and len(history) >= 3:
+                await memory_extractor.extract_memory_points(
+                    user_id=user_uuid, message=text, reply=history[-3]["content"]
+                )
+    except WebSocketDisconnect:
+        manager.disconnect(user_uuid)
+    except Exception as e:
+        await handle_exception(e)

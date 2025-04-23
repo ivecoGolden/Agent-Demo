@@ -31,6 +31,8 @@ class TokenResponse(BaseModel):
     # 登录成功后返回的 JWT token
     access_token: str  # JWT 令牌
     token_type: str = "bearer"  # 令牌类型，默认为 Bearer
+    created_at: str  # 令牌创建时间
+    expires_at: str  # 令牌过期时间
 
 
 class UserListResponse(BaseModel):

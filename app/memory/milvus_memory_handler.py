@@ -7,12 +7,13 @@ from pymilvus import (
     utility,
 )
 from typing import List, Dict
+from app.core.config import settings
 import time
 
 
 class MilvusMemoryHandler:
     def __init__(self, collection_name="user_memory"):
-        connections.connect("default", host="localhost", port="19530")
+        connections.connect("default", host=settings.MILVUS_HOST, port="19530")
         self.collection_name = collection_name
         self._create_or_load_collection()
 

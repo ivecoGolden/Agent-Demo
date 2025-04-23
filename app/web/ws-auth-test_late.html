@@ -41,10 +41,18 @@
           socket.close();
         }
 
-        const wsUrl = `ws://localhost:7001/ws-auth?token=${token}`;
+        // const wsUrl = `wss://dev.moguangkeji.com/ws-auth-late`;
+        const wsUrl = `ws://localhost:7001/ws-auth-late`;
         socket = new WebSocket(wsUrl);
 
-        socket.onopen = () => log("✅ 已连接");
+        socket.onopen = () => {
+          log("✅ 已连接");
+          const authMessage = {
+            token: token,
+          };
+          socket.send(JSON.stringify(authMessage));
+          log("🔐 发送身份验证信息: " + JSON.stringify(authMessage));
+        };
         socket.onmessage = (event) => log("📨 收到消息: " + event.data);
         socket.onclose = () => log("❌ 连接关闭");
         socket.onerror = (error) => log("⚠️ 错误: " + error);

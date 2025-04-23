@@ -7,6 +7,8 @@ from app.utils.jwt import create_access_token
 from app.schemas.user import UserLoginRequest
 from fastapi import HTTPException
 import uuid
+from datetime import datetime, timedelta, timezone
+from app.core.config import settings
 
 
 def register_user(db: Session, user_data: UserRegisterRequest) -> User:
@@ -45,7 +47,7 @@ def register_user(db: Session, user_data: UserRegisterRequest) -> User:
     return user
 
 
-def authenticate_user(db: Session, data: UserLoginRequest) -> str:
+def authenticate_user(db: Session, data: UserLoginRequest) -> dict:
     """用户认证并生成访问令牌
 
     Args:
@@ -75,8 +77,17 @@ def authenticate_user(db: Session, data: UserLoginRequest) -> str:
     if not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="密码错误")  # 密码不匹配
 
-    token = create_access_token({"sub": str(user.id)})  # 生成包含用户ID的JWT token
-    return token
+    created_at = datetime.now(timezone.utc)
+    expire_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = created_at + expire_delta
+
+    token = create_access_token({"sub": str(user.id)}, expires_delta=expire_delta)
+
+    return {
+        "access_token": token,
+        "created_at": created_at,
+        "expires_at": expire,
+    }
 
 
 def get_users(db: Session, skip: int = 0, limit: int = 10):

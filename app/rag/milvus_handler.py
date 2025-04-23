@@ -2,10 +2,12 @@ from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connec
 from pymilvus import utility
 from typing import List
 
+from app.core.config import settings
+
 
 class MilvusHandler:
     def __init__(self, collection_name: str = "rag_documents"):
-        connections.connect("default", host="localhost", port="19530")
+        connections.connect("default", host=settings.MILVUS_HOST, port="19530")
         self.collection_name = collection_name
         self._create_collection()
 

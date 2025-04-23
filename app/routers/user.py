@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.user import (
+    TokenResponse,
     UserRegisterRequest,
     UserLoginRequest,
     UserUpdateRequest,
@@ -59,8 +60,15 @@ def login(req: UserLoginRequest, db: Session = Depends(get_db)):
     Returns:
         包含access_token的响应
     """
-    token = authenticate_user(db, req)
-    return success({"access_token": token, "token_type": "bearer"})
+    token_info = authenticate_user(db, req)
+    return success(
+        TokenResponse(
+            access_token=token_info["access_token"],
+            created_at=str(int(token_info["created_at"].timestamp())),
+            expires_at=str(int(token_info["expires_at"].timestamp())),
+            token_type="bearer",
+        )
+    )
 
 
 @router.get("/me")

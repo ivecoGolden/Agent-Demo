@@ -18,14 +18,13 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         str: 编码后的JWT令牌字符串
 
     Note:
-        - 默认有效期为15分钟
         - 会自动添加exp过期时间声明
         - 使用HS256算法和配置的密钥进行签名
     """
     to_encode = data.copy()  # 复制输入数据避免修改原始字典
     expire = datetime.utcnow() + (
-        expires_delta or timedelta(minutes=15)
-    )  # 计算过期时间(默认15分钟)
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})  # 添加exp过期时间声明
     return jwt.encode(
         to_encode, SECRET_KEY, algorithm=ALGORITHM
