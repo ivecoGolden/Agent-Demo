@@ -2,7 +2,6 @@ from openai import AsyncOpenAI
 import asyncio
 from typing import AsyncGenerator, Iterable
 from app.llm.base import BaseLLM
-from app.core.config import settings
 from app.llm import LLMModelConfig
 from openai.types.chat import (
     ChatCompletionMessageParam,
@@ -23,7 +22,7 @@ class OpenAILLMClient(BaseLLM):
         """
         config = model_config.value  # 获取模型配置值
         self.client = AsyncOpenAI(
-            api_key=settings.ALI_LLM_KEY,  # 使用配置的API密钥
+            api_key=config.api_key,  # 使用配置的API密钥
             base_url=config.base_url,  # 使用模型配置的基础URL
         )
         self.model = config.model  # 设置模型名称

@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     ALI_LLM_BASE_URL: str
     EMBEDDING_MODEL_NAME: str = "text-embedding-v3"
 
-    AUTO_INITIALIZE_DOCS: bool = False
+    HUOSHAN_LLM_KEY: str
+    HUOSHAN_LLM_BASE_URL: str
 
     @property
     def MILVUS_HOST(self) -> str:
