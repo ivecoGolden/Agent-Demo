@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     HUOSHAN_LLM_KEY: str
     HUOSHAN_LLM_BASE_URL: str
 
+    LANGSMITH_TRACING: bool
+    LANGSMITH_API_KEY: str
+    LANGSMITH_ENDPOINT: str
+    LANGSMITH_PROJECT: str
+
     @property
     def MILVUS_HOST(self) -> str:
         return "localhost" if self.ENV == "dev" else "milvus-standalone"

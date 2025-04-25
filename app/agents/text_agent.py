@@ -5,7 +5,7 @@ from openai.types.chat import (
     ChatCompletionToolParam,
     ChatCompletionUserMessageParam,
 )
-from app.llm.openai_client import get_llm_text_client
+from app.llm.openai_client import get_DOUBAO_llm_text_client
 from app.core.config import settings
 from app.prompt.systemPrompt import SystemPrompt, build_prompt
 from app.services.rag_service import RAGService
@@ -47,7 +47,7 @@ memory_service = get_memory_service()
 # 智能体类
 class NormalAgent:
     def __init__(self):
-        self.client = get_llm_text_client()
+        self.client = get_DOUBAO_llm_text_client()
         self.tools: List[ChatCompletionToolParam] = [
             query_manual_tool_schema,
         ]

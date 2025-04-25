@@ -11,6 +11,8 @@ from openai.types.chat import (
     ChatCompletionToolParam,
 )
 from app.llm.LLMModelConfig import LLMModelConfig
+from langsmith.wrappers import wrap_openai
+from langsmith import traceable
 
 
 class OpenAILLMClient(BaseLLM):
@@ -21,13 +23,16 @@ class OpenAILLMClient(BaseLLM):
             model_config: 模型配置对象，包含base_url、model等配置信息
         """
         config = model_config.value  # 获取模型配置值
-        self.client = AsyncOpenAI(
-            api_key=config.api_key,  # 使用配置的API密钥
-            base_url=config.base_url,  # 使用模型配置的基础URL
+        self.client = wrap_openai(
+            AsyncOpenAI(
+                api_key=config.api_key,  # 使用配置的API密钥
+                base_url=config.base_url,  # 使用模型配置的基础URL
+            )
         )
         self.model = config.model  # 设置模型名称
         self.temperature = config.temperature  # 设置生成温度参数
 
+    @traceable
     async def chat(
         self,
         system: ChatCompletionSystemMessageParam,
@@ -45,6 +50,7 @@ class OpenAILLMClient(BaseLLM):
         )
         return response
 
+    @traceable
     async def stream_chat(
         self,
         system: ChatCompletionSystemMessageParam,
@@ -166,6 +172,13 @@ def get_llm_text_client() -> OpenAILLMClient:
     global _llm_text_client
     if _llm_text_client is None:
         _llm_text_client = OpenAILLMClient(LLMModelConfig.QWEN_TURBO)
+    return _llm_text_client
+
+
+def get_DOUBAO_llm_text_client() -> OpenAILLMClient:
+    global _llm_text_client
+    if _llm_text_client is None:
+        _llm_text_client = OpenAILLMClient(LLMModelConfig.DOUBAO_1_5_LITE)
     return _llm_text_client
 
 

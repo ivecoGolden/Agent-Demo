@@ -1,3 +1,4 @@
+from langsmith import traceable
 from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, connections
 from pymilvus import utility
 from typing import List
@@ -55,6 +56,7 @@ class MilvusHandler:
         data = [vectors, texts]
         self.collection.insert(data=data, fields=["embedding", "text"])
 
+    @traceable(run_type="retriever")
     def search(self, vector: List[float], top_k: int) -> List[str]:
         if utility.load_state(self.collection_name) != "Loaded":
             self.collection.load()

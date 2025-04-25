@@ -11,6 +11,7 @@
 - **PostgreSQL** - 数据持久化
 - **Alembic** - 数据库迁移工具
 - **Docker + Docker Compose** - 容器化部署
+- **Milvus** - 向量数据库，支持高效向量检索
 - **Pydantic** - 数据校验
 - **JWT** - 身份认证
 
@@ -18,22 +19,14 @@
 
 ## 🛠 项目结构
 
-```
-user_app/
-├── app/                    # 应用主逻辑
-│   ├── api/                # 路由定义
-│   ├── core/               # 设置、配置项
-│   ├── models/             # 数据模型
-│   ├── schemas/            # Pydantic 模型
-│   ├── services/           # 服务层
-│   └── main.py             # 应用入口
-├── alembic/                # 数据库迁移脚本
-├── requirements.txt        # Python依赖列表
-├── docker-compose.yml      # 服务编排
-├── Dockerfile              # 镜像构建定义
-├── .env                    # 环境变量（不提交）
-└── README.md               # 项目说明文档
-```
+- `app/`：应用主代码目录，包含核心逻辑、路由、服务、模型、提示词等
+- `alembic/`：数据库迁移脚本，配合 Alembic 使用
+- `milvus/`：Milvus 向量数据库的部署与配置文件
+- `postgre/`：PostgreSQL 数据库容器配置
+- `docs/`：产品文档或说明书
+- `tests/`：测试脚本
+- `docker-compose.yml` 等：Docker 服务编排文件
+- `wait-for-it.sh`：用于容器间启动顺序控制的脚本
 
 ---
 
@@ -42,11 +35,43 @@ user_app/
 你可以参考 `.env.example` 文件：
 
 ```env
+# 应用名称
 APP_NAME=UserApp
+
+# 运行环境（如：dev / production）
 ENV=dev
-DATABASE_URL=postgresql://postgres:postgres@db:5432/userdemo
-SECRET_KEY=生成你自己的随机密钥
+
+# 数据库连接字符串
+DATABASE_URL=postgresql://xxx:xxx@db:000/xxx
+
+# JWT 加密用的密钥，请替换为实际部署密钥
+SECRET_KEY=your-secret-key-here
+
+# Access Token 过期时间（分钟），示例：1440 = 1天
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# PostgreSQL数据库用户名(容器部署时使用)
+POSTGRES_USER=""
+# PostgreSQL数据库密码(容器部署时使用)
+POSTGRES_PASSWORD=""
+# PostgreSQL默认数据库名(容器部署时使用)
+POSTGRES_DB=""
+
+# 阿里云大模型API密钥（需替换为实际密钥）
+ALI_LLM_KEY=""
+# 阿里云大模型API基础URL地址（需替换为实际地址）
+ALI_LLM_BASE_URL=""
+
+# 火山引擎大模型API密钥（需替换为实际密钥）
+HUOSHAN_LLM_KEY=""
+# 火山引擎大模型API基础URL地址（需替换为实际地址）
+HUOSHAN_LLM_BASE_URL=""
+
+# LangSmith 链路追踪配置
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=""
+LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
+LANGSMITH_PROJECT="xxxx"
 ```
 
 ---
@@ -59,29 +84,40 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 pip install -r requirements.txt
 ```
 
-2. 本地数据库运行（可选）
+2. 创建 Docker 网络（确保各服务能互通）
 
 ```bash
-docker-compose up db
+docker network create mg_backend
 ```
 
-3. 启动应用
+3. 启动数据库服务
 
 ```bash
-uvicorn app.main:app --reload
+cd postgre
+docker-compose up -d
 ```
 
-访问地址： http://localhost:8000
-
----
-
-## 🐳 Docker 部署方式
+4. 启动向量数据库 Milvus
 
 ```bash
-docker-compose up --build
+cd ../milvus
+docker-compose up -d
 ```
 
-默认监听地址： http://localhost:9000
+5. 启动主服务（包含后端服务等）
+
+```bash
+cd ..
+docker-compose up -d
+```
+
+6. 启动应用（默认监听端口为 7001，可在根目录 docker-compose.yml 中修改）
+
+```bash
+uvicorn app.main:app --reload --port 7001
+```
+
+访问地址：http://localhost:7001
 
 ---
 
@@ -115,18 +151,11 @@ pytest -v
 
 ---
 
-## 🛰️ CI/CD 推荐（可选）
-
-- 使用 GitHub Actions 自动构建镜像并部署到远程服务器
-- 或接入 Jenkins / Drone 自定义流程
-
----
-
 ## 📌 注意事项
 
 - `.env` 文件请勿上传到版本库（已加入 `.gitignore`）
 - 初次部署数据库请确保数据卷挂载成功
-- 建议使用 `wait-for-it.sh` 等工具确保容器间启动顺序
+- 建议使用 `wait-for-it.sh` 等工具确保容器间启动顺序(已经废弃)
 
 ---
 

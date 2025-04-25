@@ -1,3 +1,4 @@
+from langsmith import traceable
 from pymilvus import (
     Collection,
     CollectionSchema,
@@ -88,6 +89,7 @@ class MilvusMemoryHandler:
             ],
         )
 
+    @traceable(run_type="retriever")
     def search_memory(
         self, user_id: str, embedding: List[float], top_k=5
     ) -> List[Dict]:

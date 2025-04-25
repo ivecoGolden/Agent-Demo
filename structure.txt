@@ -6,9 +6,7 @@
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions
-│       ├── 11344d5f90ba_add_is_active_and_role.py
-│       ├── 2f8f00544ae8_add_chatrecord_table_and_userid_field.py
-│       └── a0d2c58c292d_create_users_table.py
+│       └── ec6e5ded33d2_first.py
 ├── alembic.ini
 ├── app
 │   ├── __init__.py
@@ -29,6 +27,12 @@
 │   │   ├── openai_client.py
 │   │   └── schemas.py
 │   ├── main.py
+│   ├── memory
+│   │   ├── __init__.py
+│   │   ├── memory_extractor.py
+│   │   ├── memory_service.py
+│   │   ├── milvus_memory_handler.py
+│   │   └── schemas.py
 │   ├── models
 │   │   ├── chat_record.py
 │   │   ├── user.py
@@ -41,11 +45,11 @@
 │   │   ├── indexer.py
 │   │   ├── milvus_handler.py
 │   │   ├── retriever.py
-│   │   ├── schemas.py
-│   │   └── users
+│   │   └── schemas.py
 │   ├── routers
 │   │   ├── agent_test.py
 │   │   ├── chat.py
+│   │   ├── eval.py
 │   │   ├── rag_test.py
 │   │   └── user.py
 │   ├── schemas
@@ -54,28 +58,28 @@
 │   │   ├── chat_record_service.py
 │   │   ├── rag_service.py
 │   │   └── user_service.py
+│   ├── test
+│   │   └── prompt
 │   ├── utils
 │   │   ├── jwt.py
 │   │   ├── response.py
 │   │   └── security.py
 │   └── web
-│       ├── websocket.html
-│       └── ws-auth-test.html
+│       ├── ws-auth-test.html
+│       └── ws-auth-test_late.html
 ├── docker-compose-first.yml
 ├── docker-compose.yml
 ├── docs
 │   └── product.md
 ├── milvus
 │   ├── docker-compose.yml
+│   ├── docker-compose_ali.yml
 │   └── volumes
 │       ├── etcd
-│       │   └── member
 │       ├── milvus
-│       │   ├── data
-│       │   ├── rdb_data
-│       │   └── rdb_data_meta_kv
 │       └── minio
-│           └── a-bucket
+├── postgre
+│   └── docker-compose.yml
 ├── requirements.txt
 ├── structure.txt
 ├── tests
@@ -83,4 +87,4 @@
 │   └── test_user_flow.py
 └── wait-for-it.sh
 
-28 directories, 56 files
+26 directories, 62 files

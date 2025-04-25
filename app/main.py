@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -15,6 +16,11 @@ from fastapi.responses import HTMLResponse
 from app.routers import rag_test
 from app.routers import agent_test
 from app.routers import eval
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 logger.info("🚀 应用启动成功")
 
